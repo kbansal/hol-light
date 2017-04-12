@@ -477,7 +477,7 @@ let ONCE_ASM_REWRITE_RULE thl th =
 let GEN_REWRITE_TAC pstring cnvl thl =
   let cnvl = register_conv2conv pstring cnvl in
   replace_tactic_log
-    (Gen_rewrite_tac_log (pstring, thl))
+    (Gen_rewrite_tac_log ((get_tag_base "conv2conv" pstring), thl))
     (CONV_TAC "simp.ml:(GEN_REWRITE_CONV cnvl thl)" (GEN_REWRITE_CONV cnvl thl));;
 
 let rewrite_log ty thl tac = replace_tactic_log (Rewrite_tac_log (ty,thl)) tac;;

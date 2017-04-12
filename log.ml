@@ -109,34 +109,36 @@ let replace_comb str =
   let tmp = Str.global_replace (Str.regexp "funpow") "FUNPOW" str in
   replace_o tmp
 
+let get_tag_base description str = match Str.split (Str.regexp "[:]") str with
+  | [] -> failwith ("Empty lookup tag for " ^ description)
+  | h :: [] -> h
+  | h :: t -> String.concat ":" t
+
 let lookup_from_registry registry description tag =
   if Hashtbl.mem registry tag then (
     let conv = Hashtbl.find registry tag in
     Printf.printf "Retrieved %s '%s'\n" description tag;
-    let tag_base = (Array.of_list(Str.split (Str.regexp "[:]+") tag)).(1) in
-    (if String.uppercase_ascii tag_base = replace_comb tag_base then
+    (if String.uppercase_ascii tag = replace_comb tag then
        (Printf.printf "Returning retrieved %s: %s\n" description tag;
         conv)
      else failwith (description ^ " is not replayable " ^ tag)))
   else failwith (description ^ " is not found: " ^ tag)
 
-let register_entity registry tag conv =
+let register_entity registry description tag conv =
+  let tag_base = get_tag_base description tag in
+  let tag = tag_base in
   if Hashtbl.mem registry tag then (
     let rconv = Hashtbl.find registry tag in
-    (* Printf.printf "Retrieved conversion '%s'\n" tag; *)
-    let tag = (Array.of_list(Str.split (Str.regexp "[:]+") tag)).(1) in
     (if String.uppercase_ascii tag = replace_comb tag then
-       ((* Printf.printf "Returning retrieved\n"; *)
-       conv) (*rconv here*)
+       conv (*Alternatively: rconv here to check failures immediately*)
      else
-       ((* Printf.printf "Returning original\n"; *)
-       conv)))
+       conv))
   else (
     Hashtbl.replace registry tag conv;
     conv);;
 
-let register_conv = register_entity conversion_registry;;
-let register_conv2conv = register_entity conv2conv_registry;;
+let register_conv = register_entity conversion_registry "conversion";;
+let register_conv2conv = register_entity conv2conv_registry "conv2conv";;
 let lookup_conv = lookup_from_registry conversion_registry "conversion";;
 let lookup_conv2conv =
   lookup_from_registry conv2conv_registry "conv2conv";;

@@ -370,7 +370,7 @@ let (CONV_TAC : string -> conv -> tactic) =
   let t_tm = `T` in
   fun args conv ->
   let conv = register_conv args conv in
-  replace_tactic_log (Conv_tac_log args) (fun ((asl,w) as g) ->
+  replace_tactic_log (Conv_tac_log (get_tag_base "conversion" args)) (fun ((asl,w) as g) ->
     let th = conv w in
     let tm = concl th in
     if aconv tm w then ACCEPT_TAC th g else

@@ -203,6 +203,14 @@ let proof_fmt : Format.formatter option =
     Some Format.formatter_of_out_channel proof_log_oc
   with Not_found -> None;;
 
+let tactic_proof_fmt : Format.formatter option =
+  try
+    let filename = Sys.getenv "TACTIC_PROOF_LOG_OUTPUT" in
+    (* TODO figure out where to close this channel. *)
+    let proof_log_oc = open_out filename in
+    Some Format.formatter_of_out_channel proof_log_oc
+  with Not_found -> None;;
+
 let training_proof_fmt : (int -> Format.formatter) option =
   try
     let make_formatter filename =
@@ -381,6 +389,15 @@ let rec sexp_proof_log f (Proof_log (gl, taclog, logl)) =
 let rec sexp_proof_log_flatten_stripped f (Proof_log (gl, taclog, logl)) =
   Snode [Sleaf "p"; sexp_goal_stripped gl; Sleaf (tactic_name taclog)] ::
     List.concat (map (sexp_proof_log_flatten_stripped f) logl)
+
+let rec sexp_tac_names log =
+  let rec sexp_tac_names_ls (Proof_log (gl, taclog, logl)) =
+    (Sleaf (tactic_name taclog))::
+      (match logl with
+         [] -> []
+       | hd::[] -> sexp_tac_names_ls hd
+       | _ -> map sexp_tac_names logl) in
+  Snode (sexp_tac_names_ls log)
 
 let referenced_thms plog =
   let seen : (int, unit) Hashtbl.t = Hashtbl.create 1 in

@@ -964,6 +964,10 @@ let (TAC_PROOF : goal * tactic -> thm) =
                                  (sexp_proof_log_flatten_stripped
                                     sexp_src log)
         | None -> ());
+      (match tactic_proof_fmt with
+          Some fmt ->  sexp_print fmt (sexp_tac_names log);
+                       pp_print_newline fmt ();
+        | None -> ());
       (* Try to replay proof to ensure log is consistent *)
       (try
         if !strict then (

@@ -589,12 +589,13 @@ let string_of_thm = print_to_string pp_print_thm;;
 (* ------------------------------------------------------------------------- *)
 
 let rec sexp_term tm =
-  if true then Sleaf ("`" ^ string_of_term tm ^ "`") else  (* For debugging purposes *)
+  if false then Sleaf ("`" ^ string_of_term tm ^ "`") else  (* For debugging purposes *)
   match tm with
     Var (str, ty) -> Snode [Sleaf "v"; sexp_type ty; Sleaf str]
   | Const (str, ty) -> Snode [Sleaf "c"; sexp_type ty; Sleaf str]
   | Comb (t1, t2) -> Snode [Sleaf "a"; sexp_term t1; sexp_term t2]
   | Abs (t1, t2) -> Snode [Sleaf "l"; sexp_term t1; sexp_term t2]
+
 
 let sexp_thm = sexp_memoize (fun th ->
   let tls, tm = dest_thm th in

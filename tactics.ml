@@ -965,8 +965,8 @@ let (TAC_PROOF : goal * tactic -> thm) =
                                     sexp_src log)
         | None -> ());
       (match tactic_proof_fmt with
-          Some fmt ->  sexp_print fmt (sexp_tac_names log);
-                       pp_print_newline fmt ();
+         Some fmt -> map (sexp_print (fmt !tactics_counter)) (sexp_flat_tac log);
+                     pp_print_newline (fmt !tactics_counter) ()
         | None -> ());
       (* Try to replay proof to ensure log is consistent *)
       (try

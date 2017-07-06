@@ -203,30 +203,31 @@ let proof_fmt : Format.formatter option =
     Some Format.formatter_of_out_channel proof_log_oc
   with Not_found -> None;;
 
-let tactic_proof_fmt : Format.formatter option =
+let training_fmt filename_base =
+  let make_formatter filename =
+    (* TODO(szegedy) figure out where to close this channels. *)
+    Format.formatter_of_out_channel (open_out filename) in
+  let train_fmt = make_formatter (filename_base ^ ".train") in
+  let test_fmt = make_formatter (filename_base ^ ".test") in
+  let valid_fmt = make_formatter (filename_base ^ ".valid") in
+  Some (fun i ->
+      if i mod 5 == 4 then
+        test_fmt
+      else if i mod 5 == 2 then
+        valid_fmt
+      else
+        train_fmt);;
+
+let tactic_proof_fmt : (int -> Format.formatter) option =
   try
-    let filename = Sys.getenv "TACTIC_PROOF_LOG_OUTPUT" in
-    (* TODO figure out where to close this channel. *)
-    let proof_log_oc = open_out filename in
-    Some Format.formatter_of_out_channel proof_log_oc
+    let filename_base = Sys.getenv "TACTIC_PROOF_LOG_OUTPUT" in
+    training_fmt filename_base
   with Not_found -> None;;
 
 let training_proof_fmt : (int -> Format.formatter) option =
   try
-    let make_formatter filename =
-      (* TODO(szegedy) figure out where to close this channels. *)
-      Format.formatter_of_out_channel (open_out filename) in
     let filename_base = Sys.getenv "TRAINING_PROOF_LOG_OUTPUT" in
-    let train_fmt = make_formatter (filename_base ^ ".train") in
-    let test_fmt = make_formatter (filename_base ^ ".test") in
-    let valid_fmt = make_formatter (filename_base ^ ".valid") in
-    Some (fun i ->
-           if i mod 5 == 4 then
-             test_fmt
-           else if i mod 5 == 2 then
-             valid_fmt
-           else
-             train_fmt)
+    training_fmt filename_base
   with Not_found -> None;;
 
 (* TODO(smloos) implement this function.
@@ -323,6 +324,9 @@ let tactic_name taclog =
     | Pure_once_rewrite_type -> "Pure_once_rewrite_tac_log"
     | Once_rewrite_type -> "Once_rewrite_tac_log"
 
+let tactic_sep_name taclog =
+  ";" ^ (tactic_name taclog) ^ ";"
+
 let rec sexp_src src = match src with
   | Premise_src th -> Snode [Sleaf "Premise_src"; sexp_thm th]
   | Hypot_src (n,k) -> Snode [Sleaf "Hypot_src"; Sleaf (string_of_int n); Sleaf (string_of_int k)]
@@ -390,6 +394,7 @@ let rec sexp_proof_log_flatten_stripped f (Proof_log (gl, taclog, logl)) =
   Snode [Sleaf "p"; sexp_goal_stripped gl; Sleaf (tactic_name taclog)] ::
     List.concat (map (sexp_proof_log_flatten_stripped f) logl)
 
+(* Create an s-expr of tactics applied in a proof log. *)
 let rec sexp_tac_names log =
   let rec sexp_tac_names_ls (Proof_log (gl, taclog, logl)) =
     (Sleaf (tactic_name taclog))::
@@ -398,6 +403,22 @@ let rec sexp_tac_names log =
        | hd::[] -> sexp_tac_names_ls hd
        | _ -> map sexp_tac_names logl) in
   Snode (sexp_tac_names_ls log)
+
+(* Create an s-expr with goal-terms followed by the tactic applied to it. *)
+let rec sexp_term_tac_names log =
+  let rec sexp_term_tac_names_ls (Proof_log ((ths, tm), taclog, logl)) =
+    sexp_term tm::
+      ((Sleaf (tactic_name taclog))::
+         (match logl with
+            [] -> []
+          | hd::[] -> sexp_term_tac_names_ls hd
+          | _ -> map sexp_term_tac_names logl)) in
+  Snode (sexp_term_tac_names_ls log)
+
+(* Create a list of s-exprs alternating goal-term and tactic *)
+let rec sexp_flat_tac (Proof_log ((ths, tm), taclog, logl)) =
+  sexp_term tm :: (Sleaf (tactic_sep_name taclog) ::
+                     List.concat (map sexp_flat_tac logl))
 
 let referenced_thms plog =
   let seen : (int, unit) Hashtbl.t = Hashtbl.create 1 in

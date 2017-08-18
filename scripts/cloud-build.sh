@@ -9,6 +9,7 @@ mkdir -p build
 pushd build
 
 
+# TODO: vendor dependency sources in GCS for stability
 curl -L http://caml.inria.fr/pub/distrib/ocaml-4.04/ocaml-4.04.2.tar.gz -o ocaml-4.04.2.tar.gz
 tar -xzf ocaml-4.04.2.tar.gz
 pushd ocaml-4.04.2
@@ -26,6 +27,8 @@ make install
 cp {main/pcaml,main/quotation,etc/pa_reloc,meta/q_MLast}.{cmi,cmx,o} $(camlp5 -where)
 popd
 
+# TODO: find a convenient way for users to access hol-light after it
+# is built.
 curl -L https://github.com/brain-research/hol-light/archive/master.tar.gz -o hol-light.tar.gz
 tar -xzf hol-light.tar.gz
 pushd hol-light-master

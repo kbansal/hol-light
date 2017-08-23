@@ -53,7 +53,7 @@ let replay_tactic_log (env : env) log : tactic =
   let rec lookup src = match src with
     | Unknown_src -> failwith ("Can't replay Unknown_src in " ^ tactic_name log)
     | Premise_src th -> th
-    | Hypot_src (n,k) -> assoc (n,k) env
+    | Hypot_src (n,k,th) -> assoc (n,k) env
     | Conj_left_src s -> ASSUME (fst (dest_conj (concl (lookup s))))
     | Conj_right_src s -> ASSUME (snd (dest_conj (concl (lookup s))))
     | Assume_src tm -> ASSUME tm in
@@ -82,7 +82,7 @@ let replay_tactic_log (env : env) log : tactic =
     | Arith_tac_log -> get "ARITH_TAC" arith_tac
     | Real_arith_tac_log -> get "REAL_ARITH_TAC" real_arith_tac
     | Real_arith_tac2_log -> get "REAL_ARITH_TAC (v2)" real_arith_tac2
-    | Raw_pop_tac_log n -> RAW_POP_TAC n
+    | Raw_pop_tac_log (n,th) -> RAW_POP_TAC n
     | Raw_pop_all_tac_log -> RAW_POP_ALL_TAC
     | Undisch_tac_log tm -> UNDISCH_TAC tm
     | Spec_tac_log (tm1, tm2) -> SPEC_TAC (tm1, tm2)
@@ -231,7 +231,7 @@ let finalize_proof_log : int -> thm proof_log -> src proof_log = fun before_thms
       | Itaut_tac_log -> Itaut_tac_log
       | Cheat_tac_log -> Cheat_tac_log
       | Ants_tac_log -> Ants_tac_log
-      | Raw_pop_tac_log n -> Raw_pop_tac_log n
+      | Raw_pop_tac_log (n,th) -> Raw_pop_tac_log (n,thm th)
       | Raw_pop_all_tac_log -> Raw_pop_all_tac_log
       | Asm_meson_tac_log thl -> Asm_meson_tac_log (map thm thl)
       | Asm_metis_tac_log thl -> Asm_metis_tac_log (map thm thl)
@@ -249,7 +249,7 @@ let finalize_proof_log : int -> thm proof_log -> src proof_log = fun before_thms
       with Failure _ -> env in
     let rec hyps k env asl = match asl with
         [] -> env
-      | (_,th)::asl -> hyps (succ k) (hyp env (Hypot_src (n,k)) th) asl in
+      | (_,th)::asl -> hyps (succ k) (hyp env (Hypot_src (n,k,th)) th) asl in
     let env = hyps 0 env asl in
     Proof_log (g, tactic env tac, map (proof (succ n) env) logs)
   in

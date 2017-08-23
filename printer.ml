@@ -597,6 +597,11 @@ let rec sexp_term tm =
   | Abs (t1, t2) -> Snode [Sleaf "l"; sexp_term t1; sexp_term t2]
 
 
-let sexp_thm = sexp_memoize (fun th ->
-  let tls, tm = dest_thm th in
-  Snode [Sleaf "h"; Snode (map sexp_term tls); sexp_term tm])
+let sexp_thm =
+  (* don't memoize when generating training data *)
+  if true then (fun th ->
+    let tls, tm = dest_thm th in
+    Snode [Sleaf "h"; Snode (map sexp_term tls); sexp_term tm]) else
+  sexp_memoize (fun th ->
+      let tls, tm = dest_thm th in
+      Snode [Sleaf "h"; Snode (map sexp_term tls); sexp_term tm])

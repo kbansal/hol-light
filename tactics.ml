@@ -281,9 +281,9 @@ let (FIND_ASSUM: thm_tactic -> term -> tactic) =
 let RAW_POP_TAC: int -> tactic =
   fun n (asl,w as g) ->
     try
-      let asl0,(_::asl1) = chop_list n asl in
+      let asl0,((_,thp)::asl1) = chop_list n asl in
       null_meta,[asl0 @ asl1,w],
-      fun _ [th,log] -> th, Proof_log (g, Raw_pop_tac_log 0, [log])
+      fun _ [th,log] -> th, Proof_log (g, Raw_pop_tac_log (n,thp), [log])
     with Failure _ -> failwith "RAW_POP_TAC";;
 
 (* For tactic logging purposes *)
@@ -291,9 +291,10 @@ let RAW_POP_ALL_TAC: tactic = replace_tactic_log Fake_log (
   fun (_,w) -> null_meta,[[],w],fun _ [th,log]-> th,log)
 
 let (POP_ASSUM: thm_tactic -> tactic) =
-  fun ttac -> add_tactic_log (Raw_pop_tac_log 0) (
-   function (((_,th)::asl),w) -> ttac th (asl,w)
-    | _ -> failwith "POP_ASSUM: No assumption to pop");;
+  fun ttac gl ->
+  (match gl with
+     (((_,th)::asl),w) -> add_tactic_log' gl (Raw_pop_tac_log (0,th)) (ttac th) (asl,w)
+   | _ -> failwith "POP_ASSUM: No assumption to pop");;
 
 let (ASSUM_LIST: (thm list -> tactic) -> tactic) =
     fun aslfun (asl,w) -> aslfun (map snd asl) (asl,w);;
@@ -327,7 +328,7 @@ let (REMOVE_THEN:string->thm_tactic->tactic) =
   fun s ttac (asl,w as g) ->
     let n,(_,th),asl = try removei ((=) s o fst) asl with Failure _ ->
                        failwith("USE_TAC: didn't find assumption "^s) in
-    add_tactic_log' g (Raw_pop_tac_log n) (ttac th) (asl,w);;
+    add_tactic_log' g (Raw_pop_tac_log (n,th)) (ttac th) (asl,w);;
 
 (* ------------------------------------------------------------------------- *)
 (* General tools to augment a required set of theorems with assumptions.     *)
@@ -736,8 +737,8 @@ let (STRIP_TAC: tactic) =
 
 let (UNDISCH_THEN:term->thm_tactic->tactic) =
   fun tm ttac (asl,w as g) ->
-    let n,thp,asl' = removei (fun (_,th) -> aconv (concl th) tm) asl in
-    add_tactic_log' g (Raw_pop_tac_log n) (ttac (snd thp)) (asl',w);;
+    let n,(_,thp),asl' = removei (fun (_,th) -> aconv (concl th) tm) asl in
+    add_tactic_log' g (Raw_pop_tac_log (n,thp)) (ttac thp) (asl',w);;
 
 let FIRST_X_ASSUM ttac =
     FIRST_ASSUM(fun th -> UNDISCH_THEN (concl th) ttac);;
@@ -760,7 +761,7 @@ let (SUBGOAL_THEN: term -> thm_tactic -> tactic) =
     let meta,gl,just = ttac awa (asl,w) in
     let just' i ((hth,hlog)::tail) =
       let (justth, justlog) = just i tail in
-      let justlog = Proof_log ((("",awa)::asl,w), Raw_pop_tac_log 0, [justlog]) in
+      let justlog = Proof_log ((("",awa)::asl,w), (Raw_pop_tac_log (0,awa)), [justlog]) in
       PROVE_HYP hth justth,
       Proof_log (goal, Raw_subgoal_tac_log wa, [hlog; justlog]) in
     meta,(asl,wa)::gl,just';;
@@ -966,6 +967,10 @@ let (TAC_PROOF : goal * tactic -> thm) =
         | None -> ());
       (match tactic_proof_fmt with
          Some fmt -> map (sexp_print (fmt !tactics_counter)) (sexp_flat_tac log);
+                     pp_print_newline (fmt !tactics_counter) ()
+        | None -> ());
+      (match tac_params_proof_fmt with
+         Some fmt -> map (sexp_print (fmt !tactics_counter)) (sexp_flat_tac_params sexp_src log);
                      pp_print_newline (fmt !tactics_counter) ()
         | None -> ());
       (* Try to replay proof to ensure log is consistent *)

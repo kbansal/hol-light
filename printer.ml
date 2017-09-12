@@ -598,7 +598,7 @@ let rec sexp_term tm =
 
 
 let sexp_thm =
-  (* don't memoize when generating training data *)
+  (* don't memoize (set condition to true) when generating training data *)
   if true then (fun th ->
     let tls, tm = dest_thm th in
     Snode [Sleaf "h"; Snode (map sexp_term tls); sexp_term tm]) else

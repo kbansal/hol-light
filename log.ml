@@ -344,6 +344,14 @@ let rec sexp_src src = match src with
   | Assume_src tm -> Snode [Sleaf "Assume_src"; sexp_term tm]
   | Unknown_src -> Snode [Sleaf "Unknown_src"]
 
+let rec sexp_loc_src src = match src with
+  | Premise_src th -> Snode [sexp_thm th; Sleaf " Premise_src <thm_end> "]
+  | Hypot_src (n,k,th) -> Snode [sexp_thm th; Sleaf " Hypot_src <thm_end> "]
+  | Conj_left_src s -> sexp_src s
+  | Conj_right_src s -> sexp_src s
+  | Assume_src tm -> Snode [sexp_term tm; Sleaf " Assume_src <thm_end> "]
+  | Unknown_src -> Snode [Sleaf " Unknown_src <thm_end> "]
+
 let sexp_tactic_log f taclog =
   let name = Sleaf (tactic_name taclog) in
   match taclog with
@@ -424,9 +432,16 @@ let rec sexp_term_tac_names log =
           | _ -> map sexp_term_tac_names logl)) in
   Snode (sexp_term_tac_names_ls log)
 
+let sleaf s = (Sleaf s)
+
+(* Create an s-expr with goalstate (asl,w), tactic name, and parameters. *)
 let rec sexp_flat_tac_params f (Proof_log ((ths, tm), taclog, logl)) =
-  sexp_term tm :: (Sleaf "; ") :: (sexp_tactic_log f taclog) :: (Sleaf "; ") ::
-                     List.concat (map (sexp_flat_tac_params f) logl)
+  sexp_term tm :: (Sleaf " <goalterm>; ") ::
+    (Snode (map sleaf (map fst ths))) :: (Sleaf " <goalthmstr>; ") ::
+      (Snode (map sexp_thm (map snd ths))) :: (Sleaf " <goalthms>; ") ::
+        (Sleaf (tactic_name taclog)) :: (Sleaf " <tactic>; ") ::
+          (sexp_tactic_log sexp_loc_src taclog) :: (Sleaf " <parameterls>; ") ::
+            (Sleaf " <end>; ") :: List.concat (map (sexp_flat_tac_params f) logl)
 
 (* Create a list of s-exprs alternating goal-term and tactic *)
 let rec sexp_flat_tac (Proof_log ((ths, tm), taclog, logl)) =

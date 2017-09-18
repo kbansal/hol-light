@@ -278,6 +278,9 @@ let (FIND_ASSUM: thm_tactic -> term -> tactic) =
     ttac(snd(find (fun (_,th) -> concl th = t) asl)) g;;
 
 (* For tactic logging purposes *)
+(* DEBUGGING: Line for failing all RAW_POP_TAC called with n!=0 *)
+(* if n != 0 then (failwith ("RAW_POP_TAC_CALLED: " ^ (string_of_int n));())
+   else ();*)
 let RAW_POP_TAC: int -> tactic =
   fun n (asl,w as g) ->
     try

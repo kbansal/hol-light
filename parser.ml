@@ -505,3 +505,51 @@ let parse_term s =
   if l = [] then
    (term_of_preterm o (retypecheck [])) ptm
   else failwith "Unparsed input following term";;
+
+(* ------------------------------------------------------------------------- *)
+(* S-Expression parsing                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+let sexp_of_str s =
+  let rec next_sep i =
+    if i < String.length s then
+      match String.get s i with
+        '(' | ')' | ' ' -> i
+      | _ -> next_sep (i+1)
+    else i in
+  let rec sexp_at i =
+    match String.get s i with
+      '(' -> node_at (i+1) []
+    | _ ->
+        let j = next_sep i in
+        let t = String.sub s i (j-i) in
+        (Sleaf t,j)
+  and node_at i l =
+    if i < String.length s then
+      match String.get s i with
+        ' ' -> node_at (i+1) l
+      | ')' -> (Snode (List.rev l), i+1)
+      | _ -> let x,j = sexp_at i in node_at j (x::l)
+    else failwith "sexp_of_str: Unexpected end of input" in
+  let x,i = sexp_at 0 in
+  if i = String.length s then x
+  else failwith "sexp_of_str: Trailing input"
+
+let rec type_of_sexp x =
+  match x with
+    Sleaf t -> mk_vartype t
+  | Snode (Sleaf t::l) -> mk_type(t,map type_of_sexp l)
+  | _ -> failwith "type_of_sexp: Unexpected node format."
+
+let rec term_of_sexp x =
+  match x with
+    Snode [Sleaf "v"; tp; Sleaf s] -> mk_var(s, type_of_sexp tp)
+  | Snode [Sleaf "c"; tp; Sleaf s] ->
+      term_of_preterm (Constp(s, pretype_of_type (type_of_sexp tp)))
+  | Snode [Sleaf "a"; t1; t2] -> mk_comb(term_of_sexp t1, term_of_sexp t2)
+  | Snode [Sleaf "l"; t1; t2] -> mk_abs(term_of_sexp t1, term_of_sexp t2)
+  | _ -> failwith "term_of_sexp: Unexpected node format."
+
+let decode_term s = match !current_encoding with
+    Pretty -> parse_term s
+  | Sexp -> term_of_sexp (sexp_of_str s)

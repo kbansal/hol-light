@@ -605,3 +605,11 @@ let sexp_thm =
   sexp_memoize (fun th ->
       let tls, tm = dest_thm th in
       Snode [Sleaf "h"; Snode (map sexp_term tls); sexp_term tm])
+
+let str_of_sexp s = sexp_print Format.str_formatter s; flush_str_formatter()
+
+type term_encoding = Pretty | Sexp
+let current_encoding = ref Pretty
+let encode_term t = match !current_encoding with
+    Pretty -> string_of_term t
+  | Sexp -> str_of_sexp (sexp_term t)

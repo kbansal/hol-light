@@ -91,7 +91,7 @@ struct
         with Not_found ->
           fail (s, i) "matching `" "end of input" in
         let tm = String.sub s (i+1) (j-i-1) in
-        (Parser.parse_term tm, (s, j+2))
+        (Parser.decode_term tm, (s, j+2))
 
   let th p = applyc p thp
   let thl p c = applyc p (listparser thp) c
